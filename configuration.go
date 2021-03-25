@@ -1,17 +1,22 @@
 package gowfs
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 import "errors"
 import "time"
 import "net/url"
 import "os/user"
 
-const WebHdfsVer string = "/webhdfs/v1"
+const WebHdfsVer string = "/v1"
 
 type Configuration struct {
 	Addr                  string // host:port
 	BasePath              string // initial base path to be appended
 	User                  string // user.name to use to connect
+	UseHTTPs              bool   // force using https
+	Version               string // change default version
 	ConnectionTimeout     time.Duration
 	DisableKeepAlives     bool
 	DisableCompression    bool
@@ -32,8 +37,14 @@ func (conf *Configuration) GetNameNodeUrl() (*url.URL, error) {
 	if &conf.Addr == nil {
 		return nil, errors.New("Configuration namenode address not set.")
 	}
+	conf.Addr = strings.TrimLeft(conf.Addr, "/")
 
-	var urlStr string = fmt.Sprintf("http://%s%s%s", conf.Addr, WebHdfsVer, conf.BasePath)
+	var scheme = "http"
+	if conf.UseHTTPs {
+		scheme = "https"
+	}
+
+	var urlStr string = fmt.Sprintf("%s://%s%s%s", scheme, conf.Addr, WebHdfsVer, conf.BasePath)
 
 	if &conf.User == nil || len(conf.User) == 0 {
 		u, _ := user.Current()
